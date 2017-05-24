@@ -9,10 +9,10 @@ import os
 import math
 import argparse
 import numpy as np
+import cntk as C
 import _cntk_py
 import cntk.io.transforms as xforms
 
-import cntk as C
 from cntk.logging import *
 from cntk.ops import placeholder, minus, constant, relu
 from cntk.train.distributed import data_parallel_distributed_learner, Communicator
@@ -32,7 +32,7 @@ image_height = 224
 image_width  = 224
 num_channels = 3  # RGB
 num_classes  = 1000
-model_name   = "VGG16.model"
+model_name   = "VGG19.model"
 
 # Create a minibatch source.
 def create_image_mb_source(map_file, is_training, total_number_of_samples):
@@ -64,7 +64,7 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
         multithreaded_deserializer = True)
 
 # Create the network.
-def create_vgg16():
+def create_vgg19():
 
     # Input variables denoting the features and label data
     feature_var = C.input_variable((num_channels, image_height, image_width))
@@ -89,19 +89,19 @@ def create_vgg16():
             ]),
             MaxPooling((2,2), (2,2), name='pool2'),
 
-            For(range(3), lambda i: [
+            For(range(4), lambda i: [
                 Convolution2D((3,3), 256, name='conv3_{}'.format(i)),
                 Activation(activation=relu, name='relu3_{}'.format(i)),
             ]),
             MaxPooling((2,2), (2,2), name='pool3'),
 
-            For(range(3), lambda i: [
+            For(range(4), lambda i: [
                 Convolution2D((3,3), 512, name='conv4_{}'.format(i)),
                 Activation(activation=relu, name='relu4_{}'.format(i)),
             ]),
             MaxPooling((2,2), (2,2), name='pool4'),
 
-            For(range(3), lambda i: [
+            For(range(4), lambda i: [
                 Convolution2D((3,3), 512, name='conv5_{}'.format(i)),
                 Activation(activation=relu, name='relu5_{}'.format(i)),
             ]),
@@ -162,16 +162,16 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
     # Train all minibatches
     training_session(
-        trainer=trainer, mb_source=train_source,
-        model_inputs_to_streams=input_map,
-        mb_size=minibatch_size,
+        trainer=trainer, mb_source = train_source,
+        model_inputs_to_streams = input_map,
+        mb_size = minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config=CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
-        test_config=TestConfig(source=test_source, mb_size=minibatch_size)
+        checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
+        test_config = TestConfig(source=test_source, mb_size=minibatch_size)
     ).train()
 
 # Train and evaluate the network.
-def vgg16_train_and_eval(train_data, test_data, num_quantization_bits=32, minibatch_size=128, epoch_size = 1281167, max_epochs=80,
+def vgg19_train_and_eval(train_data, test_data, num_quantization_bits=32, minibatch_size=128, epoch_size = 1281167, max_epochs=80,
                          restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
     _cntk_py.set_computation_network_trace_level(0)
 
@@ -183,7 +183,7 @@ def vgg16_train_and_eval(train_data, test_data, num_quantization_bits=32, miniba
         gen_heartbeat=gen_heartbeat,
         num_epochs=max_epochs)
 
-    network = create_vgg16()
+    network = create_vgg19()
     trainer = create_trainer(network, epoch_size, num_quantization_bits, progress_printer)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
@@ -218,13 +218,10 @@ if __name__=='__main__':
         else:
             C.device.try_set_default_device(C.device.gpu(args['device']))
 
-    if not os.path.isdir(data_path):
-        raise RuntimeError("Directory %s does not exist" % data_path)
-
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'val_map.txt')
 
-    vgg16_train_and_eval(train_data, test_data,
+    vgg19_train_and_eval(train_data, test_data,
                          minibatch_size=args['minibatch_size'],
                          epoch_size=args['epoch_size'],
                          num_quantization_bits=args['quantized_bits'],

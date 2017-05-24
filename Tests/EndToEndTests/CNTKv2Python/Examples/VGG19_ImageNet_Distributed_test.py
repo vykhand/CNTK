@@ -25,11 +25,14 @@ script_under_test = os.path.join(example_dir, "VGG19_ImageNet_Distributed.py")
 
 mpiexec_params = [ "-n", "2"]
 
-def test_VGG19_imagenet_distributed(device_id):
+def test_VGG19_imagenet_distributed():
+    # Currently we only test for CPU since the memory usage is very high for GPU
+    device_id = -1
     params = [ "-n", "2",
                "-m", "2",
                "-e", "2",
                "-datadir", prepare_ImageNet_data(),
                "-q", "32",
+               "-device", str(device_id),
                "-r"]
-    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True, timeout_seconds=800)
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True, timeout_seconds=800, using_only_gpu=False)

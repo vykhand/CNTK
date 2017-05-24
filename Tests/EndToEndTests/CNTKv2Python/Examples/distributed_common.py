@@ -36,8 +36,8 @@ def mpiexec_execute(script, mpiexec_params, params, timeout_seconds=TIMEOUT_SECO
     str_out = out.decode(sys.getdefaultencoding())
     return str_out
 
-def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE, timeout_seconds=TIMEOUT_SECONDS):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
+def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE, timeout_seconds=TIMEOUT_SECONDS, using_only_gpu=True):
+    if using_only_gpu and cntk_device(device_id).type() != DeviceKind_GPU:
        pytest.skip('test only runs on GPU')
     str_out = mpiexec_execute(script, mpiexec_params, params, timeout_seconds)
     results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", str_out)
