@@ -32,7 +32,7 @@ public:
         for (int i = 0; i < numHosts; ++i)
             // This would create nullptr array
             m_nccl.push_back(NcclComm(deviceId, mpi));
-        int hostId = mpi->CurrentNodeRank();
+        int hostId = mpi->CurrentNodeRank() / numHosts;
         // Use m_rankId as deviceId, as we know each GPU has one process.
         NcclComm ncclPerNode = NcclComm(mpi->LocalRankId(), mpi);
         m_nccl[hostId] = ncclPerNode;
