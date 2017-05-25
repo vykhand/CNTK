@@ -25,7 +25,7 @@ class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
 public:
     SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace),
-        m_iterationCount(0), m_nccl(mpi->CurrentNodeRank() % mpi->NumNodesInUse(), mpi), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
+        m_iterationCount(0), m_nccl(mpi->CurrentNodeRank() % mpi->NumHostsInUse(), mpi), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
     { }
 
     ~SimpleDistGradAggregator()

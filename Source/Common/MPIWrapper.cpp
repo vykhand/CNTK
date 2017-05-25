@@ -87,6 +87,7 @@ public:
     virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
     virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
     virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Send(void* buf, int count, MPI_Datatype datatype, int dest, int tag/*MPI_Comm comm,*/);
     virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
     virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
     virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
@@ -186,6 +187,7 @@ public:
     virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
     virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
     virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Send(void* buf, int count, MPI_Datatype datatype, int dest, int tag/*MPI_Comm comm,*/);
     virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
     virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
     virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
@@ -668,6 +670,11 @@ int MPIWrapperMpi::Isend(const void* buf, int count, MPI_Datatype datatype, int 
     return MPI_Isend(buf, count, datatype, dest, tag, m_currentComm, request);
 }
 
+int MPIWrapperMpi::Send(void* buf, int count, MPI_Datatype datatype, int dest, int tag)
+{
+    return MPI_Send(buf, count, datatype, dest, tag, m_currentComm);
+}
+
 int MPIWrapperMpi::Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Status* status)
 {
     return MPI_Recv(buf, count, datatype, source, tag, m_currentComm, status);
@@ -1057,6 +1064,11 @@ int MPIWrapperEmpty::Waitall(int count, MPI_Request array_of_requests[], MPI_Sta
 }
 
 int MPIWrapperEmpty::Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Request* request)
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Send(void* buf, int count, MPI_Datatype datatype, int dest, int tag)
 {
     return MPI_UNDEFINED;
 }

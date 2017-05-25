@@ -23,7 +23,9 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     : m_ncclComm(nullptr), m_stream(nullptr)
 {
     size_t numRanks = mpi->NumNodesInUse() / mpi->NumHostsInUse();
-    std::vector<int> allDevs(numRanks);
+    /*
+    std::vector<int> allDevs(mpi->NumNodesInUse());
+    // BUGBUG: deviceId should be global ID here.
     mpi->Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT);
 
     for (size_t r = 0; r<numRanks; r++)
@@ -40,6 +42,7 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
                 return;
             }
     }
+    */
 
     ncclUniqueId ncclId;
     ncclResult_t res;
@@ -48,10 +51,19 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     if (res != ncclSuccess)
         RuntimeError("NcclComm failed to obtain ncclUniqueId: %s", ncclGetErrorString(res));
 
-    mpi->Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0);
+    // mpi->Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0);
+    // Bcast to the ranks within same node
+    size_t hostId = mpi->CurrentNodeRank() / numRanks;
+    if (mpi->CurrentNodeRank() % numRanks != 0)
+        mpi->Recv(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, (int)hostId * numRanks, hostId, MPI_STATUS_IGNORE);
+    else
+    {
+        for (size_t i = hostId * numRanks + 1; i < (hostId + 1) * numRanks; i++)
+            mpi->Send(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, (int)i, hostId);
+    }
 
     PrepareDevice(deviceId);
-    res = ncclCommInitRank(&m_ncclComm, numRanks, ncclId, mpi->CurrentNodeRank());
+    res = ncclCommInitRank(&m_ncclComm, numRanks, ncclId, mpi->CurrentNodeRank() % numRanks);
     if (res != ncclSuccess)
       RuntimeError("NcclComm failed to initialize ncclComm_t: %s", ncclGetErrorString(res));
 
