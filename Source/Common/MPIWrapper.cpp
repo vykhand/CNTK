@@ -602,7 +602,7 @@ void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*defaul
         || MpiFail("requestnodes: MPI_Allgather");
 
     m_multiHost = false;
-    m_numHostsInUse = 0;
+    m_numHostsInUse = 1;
     std::unordered_set<std::string> hostNames;
     hostNames.insert(allNames);
     for (size_t i = 1; i < m_numNodesInUse; i++)
