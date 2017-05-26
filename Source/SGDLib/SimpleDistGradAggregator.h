@@ -372,7 +372,13 @@ private:
                 for (size_t i : m_gradientIndexToAggregate)
                 {
                     reductionBuffer = (i == -1)? m_aggregationBuffer->Data() : gradients[i]->Data();
+                    GPUDataTransferer gpuDataTransferer(deviceId, m_useAsyncAggregation);
+                    std::shared_ptr<ElemType> intermediateCPUBuffer = AllocateIntermediateBuffer(deviceId, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements());
+                    gpuDataTransferer.CopyGPUToCPUAsync(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(), intermediateCPUBuffer.get());
+                    gpuDataTransferer.WaitForCopyGPUToCPUAsync();
                     m_mpi->AllReduce(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements());
+                    gpuDataTransferer.CopyCPUToGPUAsync(intermediateCPUBuffer.get(), (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(), reductionBuffer);
+                    gpuDataTransferer.WaitForCopyCPUToGPUAsync();
                     m_nccl.Broadcast(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(), MPI_DOUBLE, 0);
                 }
             }
