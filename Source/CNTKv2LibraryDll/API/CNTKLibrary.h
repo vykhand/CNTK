@@ -2737,7 +2737,7 @@ namespace CNTK
             rowIndices.resize(numNonZeroValues);
             nonZeroValues.resize(numNonZeroValues);
 
-            CopyVariableValueToCSCSparse(outputVariable, sequenceLength, colStarts, rowIndices, nonZeroValues);
+            CopyVariableValueToCSCSparse(sequenceLength, colStarts, rowIndices, nonZeroValues);
         }
 
         ///

@@ -592,10 +592,6 @@ namespace CNTK
             InvalidArgument("The outputVariable '%S' shape '%S' is unknown shape or has inferred dimension for at least one axis.",
                 outputVariable.AsString().c_str(), varShape.AsString().c_str());
 
-        if (varShape[0] != varShape.TotalSize())
-            InvalidArgument("For sparse data, the variable shape '%S' %s axis dimensionality must equal the total size (%zu) of the variable.",
-                varShape.AsString().c_str(), Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading", varShape.TotalSize());
-
         if (!outputVariable.IsSparse())
             InvalidArgument("The outputVariable '%S' must be in the sparse format.");
 
@@ -615,7 +611,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    void CopyVariableValueToCSCSparse(const Variable& outputVaraible, size_t sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues)
+    void CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues)
     {
         // All sanity check has been done in ValidateSparseCSCAndGetIndexSizes().
         NDArrayViewPtr cpuArrayView;
