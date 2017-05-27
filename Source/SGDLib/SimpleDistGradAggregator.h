@@ -26,7 +26,12 @@ public:
     SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace),
         m_iterationCount(0), m_nccl(mpi->CurrentNodeRank() % mpi->NumHostsInUse(), mpi), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
-    { }
+    {
+        if (m_mpi->CurrentNodeRank() % (m_mpi->NumNodesInUse() / m_mpi->NumHostsInUse()) == 0)
+        {
+            m_localMpi = MPIWrapper::GetInstance();
+        }
+    }
 
     ~SimpleDistGradAggregator()
     {
@@ -366,19 +371,19 @@ private:
             fprintf(stderr, "Done with local NCCL allreduce\n");
             // Reduce between nodes, rank 0 on each node does allreduce between nodes then broadcast within node
             ElemType* reductionBuffer;
-            if (m_mpi->CurrentNodeRank() % m_mpi->NumNodesInUse() == 0)
+            if (m_mpi->CurrentNodeRank() % (m_mpi->NumNodesInUse() / m_mpi->NumHostsInUse()) == 0)
             {
                 fprintf(stderr, "TODO between node allreduce and broadcast\n");
                 for (size_t i : m_gradientIndexToAggregate)
                 {
                     reductionBuffer = (i == -1)? m_aggregationBuffer->Data() : gradients[i]->Data();
-                    GPUDataTransferer gpuDataTransferer(deviceId, m_useAsyncAggregation);
-                    std::shared_ptr<ElemType> intermediateCPUBuffer = AllocateIntermediateBuffer(deviceId, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements());
-                    gpuDataTransferer.CopyGPUToCPUAsync(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(), intermediateCPUBuffer.get());
-                    gpuDataTransferer.WaitForCopyGPUToCPUAsync();
-                    m_mpi->AllReduce(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements());
-                    gpuDataTransferer.CopyCPUToGPUAsync(intermediateCPUBuffer.get(), (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(), reductionBuffer);
-                    gpuDataTransferer.WaitForCopyCPUToGPUAsync();
+                    // GPUDataTransferer gpuDataTransferer(deviceId, m_useAsyncAggregation);
+                    // std::shared_ptr<ElemType> intermediateCPUBuffer = AllocateIntermediateBuffer(deviceId, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements());
+                    // gpuDataTransferer.CopyGPUToCPUAsync(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(), intermediateCPUBuffer.get());
+                    // gpuDataTransferer.WaitForCopyGPUToCPUAsync();
+                    m_localMpi->AllReduce(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements());
+                    // gpuDataTransferer.CopyCPUToGPUAsync(intermediateCPUBuffer.get(), (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(), reductionBuffer);
+                    // gpuDataTransferer.WaitForCopyCPUToGPUAsync();
                     m_nccl.Broadcast(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(), MPI_DOUBLE, 0);
                 }
             }
@@ -489,6 +494,7 @@ private:
 
     bool m_initialized;
 
+    MPIWrapperPtr m_localMpi;
     NcclComm m_nccl;
 };
 } } }
