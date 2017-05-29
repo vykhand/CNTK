@@ -43,7 +43,7 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
     transforms = []
     if is_training:
         transforms += [
-            xforms.crop(crop_type='randomside', side_ratio=0.875, jitter_type='uniratio') # train uses jitter
+            xforms.crop(crop_type='randomside', side_ratio=(0.4375, 0.875), jitter_type='uniratio') # train uses jitter
         ]
     else:
         transforms += [
@@ -167,7 +167,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        test_config = TestConfig(source=test_source, mb_size=minibatch_size)
+        test_config = TestConfig(minibatch_source=test_source, minibatch_size=minibatch_size)
     ).train()
 
 # Train and evaluate the network.
@@ -217,6 +217,9 @@ if __name__=='__main__':
             C.device.try_set_default_device(C.device.cpu())
         else:
             C.device.try_set_default_device(C.device.gpu(args['device']))
+
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
 
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'val_map.txt')
