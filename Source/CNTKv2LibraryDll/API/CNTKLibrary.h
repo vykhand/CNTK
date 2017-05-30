@@ -5636,6 +5636,10 @@ namespace CNTK
         size_t m_workerRank;
         size_t m_numberOfWorkers;
 
+        // Factor for the minibatch size for some distributed methods,
+        // currently != 1 only for block momentum.
+        size_t m_mbSizeFactor;
+
         std::vector<PeriodicAction> m_actions;
 
         // Training.

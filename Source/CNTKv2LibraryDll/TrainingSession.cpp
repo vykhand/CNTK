@@ -10,6 +10,10 @@
 #include "fileutil.h"
 #include "PerformanceProfiler.h"
 
+#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
+#include "BlockMomentumDistributedLearner.h"
+#endif
+
 namespace CNTK
 {
     using namespace std;
@@ -109,7 +113,8 @@ namespace CNTK
         m_parallelAfterSamples(0),
         m_workerRank(0),
         m_numberOfWorkers(1),
-        m_test(test)
+        m_test(test),
+        m_mbSizeFactor(1)
     {
         if (!m_trainer)
             InvalidArgument("Trainer must not be null.");
@@ -135,6 +140,12 @@ namespace CNTK
                 m_parallelAfterSamples = std::max(m_parallelAfterSamples, distributed->ParallelizationAfter());
                 m_workerRank = distributed->GetCommunicator()->CurrentWorker().m_globalRank;
                 m_numberOfWorkers = distributed->GetCommunicator()->Workers().size();
+
+#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
+                auto blockMomentumLearner = std::dynamic_pointer_cast<BlockMomentumDistributedLearner>(distributed);
+                if (blockMomentumLearner)
+                    m_mbSizeFactor = m_numberOfWorkers;
+#endif
             }
         }
 
@@ -250,7 +261,7 @@ namespace CNTK
             while (shouldCV)
             {
                 size_t samplesLeft = m_cv.m_maxSamples <= totalNumberOfSamples ? 0 : m_cv.m_maxSamples - totalNumberOfSamples;
-                GetCrossValidationMinibatch(minibatch, std::min(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);                
+                GetCrossValidationMinibatch(minibatch, std::min(m_cv.m_mbSize[totalNumberOfSamples] * m_mbSizeFactor, samplesLeft), computeDevice);                
 
                 // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
                 // of error from the GPU each time, accumulatedError can be allocated on GPU
@@ -285,7 +296,7 @@ namespace CNTK
         while (shouldTest)
         {
             GetNextMinibatch(m_test.m_source, minibatch, m_test.m_varToStream.empty() ? m_varToStream : m_test.m_varToStream,
-                m_test.m_mbSize[totalNumberOfSamples], m_workerRank, m_numberOfWorkers, computeDevice);
+                m_test.m_mbSize[totalNumberOfSamples] * m_mbSizeFactor, m_workerRank, m_numberOfWorkers, computeDevice);
             shouldTest = m_trainer->TestMinibatch(minibatch, errorAndCount, computeDevice, m_numberOfWorkers != 1);
             totalNumberOfSamples += errorAndCount.second;
         }
@@ -309,7 +320,7 @@ namespace CNTK
             workerRank = 0;
         }
 
-        size_t mbSize = GetMinibatchSize();
+        size_t mbSize = GetMinibatchSize() * m_mbSizeFactor;
         mbSize = std::min(mbSize, maxMbSize);
         GetNextMinibatch(m_source, minibatch, m_varToStream, mbSize, workerRank, numberOfWorkers, computeDevice);
     }
