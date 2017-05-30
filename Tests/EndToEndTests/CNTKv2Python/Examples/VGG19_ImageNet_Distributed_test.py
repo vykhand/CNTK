@@ -35,4 +35,4 @@ def test_VGG19_imagenet_distributed(device_id):
                "-r"]
 
     # Currently we only test for CPU since the memory usage is very high for GPU (~6 GB)
-    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True, timeout_seconds=800, use_only_cpu=True)
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True, timeout_seconds=900, use_only_cpu=True)
