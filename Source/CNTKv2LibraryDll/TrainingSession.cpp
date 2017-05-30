@@ -5,9 +5,12 @@
 
 #include "stdafx.h"
 #include <boost/algorithm/string/predicate.hpp>
-
+#include "Basics.h"
+#include "Utils.h"
 #include "CNTKLibrary.h"
 #include "fileutil.h"
+#include "DataParallelDistributedLearner.h"
+#include "DistributedCommunicator.h"
 #include "PerformanceProfiler.h"
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
